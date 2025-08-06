@@ -137,6 +137,7 @@ async def update_user_tokens(user_id: int, token_change: int):
         print(f"Error in update_user_tokens: {e}")
         return 0
 
+
 async def get_referral_stats(user_id: int):
     """Get detailed referral statistics for a user"""
     try:
