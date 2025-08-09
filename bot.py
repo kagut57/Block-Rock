@@ -39,7 +39,7 @@ class Bot(Client):
             self.LOGGER(__name__).warning(f"Make Sure bot is Admin in DB Channel, and Double check the CHANNEL_ID Value, Current Value {CHANNEL_ID}")
             sys.exit()
 
-        self.set_parse_mode(ParseMode.HTML)
+        self.set_parse_mode(ParseMode.DEFAULT)
         self.LOGGER(__name__).info(f"Bot Running..!")
         self.username = usr_bot_me.username
         #web-response
