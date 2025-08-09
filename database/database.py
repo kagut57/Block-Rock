@@ -40,18 +40,15 @@ async def del_user(user_id: int):
     return
 
 async def add_referral_user(referrer_id: int, referred_id: int):
-    """Add a new referral record"""
     try:
-        # Check if this referral already exists
         existing = referrals_collection.find_one({
             "referrer_id": referrer_id,
             "referred_id": referred_id
         })
         
         if existing:
-            return False  # Already referred
+            return False
         
-        # Add referral record
         referral_data = {
             "referrer_id": referrer_id,
             "referred_id": referred_id,
@@ -61,7 +58,6 @@ async def add_referral_user(referrer_id: int, referred_id: int):
         
         referrals_collection.insert_one(referral_data)
         
-        # Initialize token balance for new user if not exists
         if not user_tokens_collection.find_one({"user_id": referred_id}):
             user_tokens_collection.insert_one({
                 "user_id": referred_id,
@@ -78,13 +74,11 @@ async def add_referral_user(referrer_id: int, referred_id: int):
         return False
 
 async def get_user_tokens(user_id: int):
-    """Get user's current token balance"""
     try:
         user_data = user_tokens_collection.find_one({"user_id": user_id})
         if user_data:
             return user_data.get("tokens", 0)
         else:
-            # Create user record if doesn't exist
             user_tokens_collection.insert_one({
                 "user_id": user_id,
                 "tokens": 0,
@@ -98,13 +92,11 @@ async def get_user_tokens(user_id: int):
         return 0
 
 async def update_user_tokens(user_id: int, token_change: int):
-    """Update user's token balance (positive to add, negative to deduct)"""
     try:
         user_data = user_tokens_collection.find_one({"user_id": user_id})
         
         if not user_data:
-            # Create user record if doesn't exist
-            initial_tokens = max(0, token_change)  # Don't allow negative starting balance
+            initial_tokens = max(0, token_change)
             user_tokens_collection.insert_one({
                 "user_id": user_id,
                 "tokens": initial_tokens,
@@ -114,13 +106,11 @@ async def update_user_tokens(user_id: int, token_change: int):
             })
             return initial_tokens
         
-        # Update tokens
         current_tokens = user_data.get("tokens", 0)
-        new_balance = max(0, current_tokens + token_change)  # Don't allow negative balance
+        new_balance = max(0, current_tokens + token_change)
         
         update_data = {"tokens": new_balance}
         
-        # Update total earned/sold counters
         if token_change > 0:
             update_data["total_earned"] = user_data.get("total_earned", 0) + token_change
         elif token_change < 0:
@@ -137,14 +127,10 @@ async def update_user_tokens(user_id: int, token_change: int):
         print(f"Error in update_user_tokens: {e}")
         return 0
 
-
 async def get_referral_stats(user_id: int):
-    """Get detailed referral statistics for a user"""
     try:
-        # Count total referrals
         total_referrals = referrals_collection.count_documents({"referrer_id": user_id})
         
-        # Get user token data
         user_data = user_tokens_collection.find_one({"user_id": user_id})
         
         if not user_data:
@@ -158,9 +144,45 @@ async def get_referral_stats(user_id: int):
         total_tokens_earned = user_data.get("total_earned", 0)
         tokens_sold = user_data.get("total_sold", 0)
         
-        # Calculate total earnings from transactions
         total_earnings = 0.0
         transactions = referral_transactions_collection.find({
             "user_id": user_id,
+            "transaction_type": "sell_approved"
         })
+        
+        for transaction in transactions:
+            total_earnings += transaction.get("value", 0.0)
+        
+        return {
+            "total_referrals": total_referrals,
+            "total_tokens_earned": total_tokens_earned,
+            "tokens_sold": tokens_sold,
+            "total_earnings": total_earnings
+        }
+        
+    except Exception as e:
+        print(f"Error in get_referral_stats: {e}")
+        return {
+            "total_referrals": 0,
+            "total_tokens_earned": 0,
+            "tokens_sold": 0,
+            "total_earnings": 0.0
+        }
+
+async def add_referral_transaction(user_id: int, transaction_type: str, amount: int, value: float):
+    try:
+        transaction_data = {
+            "user_id": user_id,
+            "transaction_type": transaction_type,
+            "amount": amount,
+            "value": value,
+            "timestamp": datetime.utcnow()
+        }
+        
+        referral_transactions_collection.insert_one(transaction_data)
+        return True
+        
+    except Exception as e:
+        print(f"Error in add_referral_transaction: {e}")
+        return False
                                                             
