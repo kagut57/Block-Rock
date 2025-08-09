@@ -162,3 +162,5 @@ async def get_referral_stats(user_id: int):
         total_earnings = 0.0
         transactions = referral_transactions_collection.find({
             "user_id": user_id,
+        })
+                                                            
