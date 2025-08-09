@@ -236,6 +236,7 @@ async def tokens_command(client: Client, message: Message):
 async def sell_tokens_command(client: Client, message: Message):
     user_id = message.from_user.id
     current_tokens = await get_user_tokens(user_id)
+    current_value = current_tokens * TOKEN_SELL_RATE
     
     try:
         amount = int(message.command[1]) if len(message.command) > 1 else 0
@@ -244,7 +245,8 @@ async def sell_tokens_command(client: Client, message: Message):
             "❌ **Invalid amount!**\n\n"
             f"Usage: `/sell_tokens <amount>`\n"
             f"Example: `/sell_tokens 50`\n\n"
-            f"Your current balance: **{current_tokens} tokens**"
+            f"Your current balance: **{current_tokens} tokens** (${current_value:.2f})\n"
+            f"Minimum withdrawal: **$1.00** ({int(1.0/TOKEN_SELL_RATE)} tokens)"
         )
         return
     
@@ -257,6 +259,19 @@ async def sell_tokens_command(client: Client, message: Message):
             f"❌ **Insufficient tokens!**\n\n"
             f"You have: **{current_tokens} tokens**\n"
             f"You want to sell: **{amount} tokens**"
+        )
+        return
+    
+    sell_value = amount * TOKEN_SELL_RATE
+    if sell_value < 1.0:
+        min_tokens_needed = int(1.0 / TOKEN_SELL_RATE)
+        await message.reply_text(
+            f"⚠️ **Minimum Withdrawal: $1.00**\n\n"
+            f"💰 **Amount to sell:** {amount} tokens (${sell_value:.2f})\n"
+            f"❌ **Minimum required:** {min_tokens_needed} tokens ($1.00)\n\n"
+            f"🔢 **You need:** {min_tokens_needed - amount} more tokens\n"
+            f"💡 **Earn more by sharing your referral link!**\n\n"
+            f"Use /referral to get your link."
         )
         return
     
