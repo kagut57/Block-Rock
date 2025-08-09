@@ -15,7 +15,7 @@ from database.database import (
     get_referral_stats, add_referral_transaction
 )
 
-TOKENS_PER_REFERRAL = 10
+TOKENS_PER_REFERRAL = 1
 TOKEN_SELL_RATE = 0.01
 
 async def delete_message_after_delay(client: Client, chat_id: int, message_id: int, delay: int):
