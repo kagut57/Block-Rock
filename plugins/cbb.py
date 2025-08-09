@@ -5,7 +5,7 @@ from config import OWNER_ID, START_MSG
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from database.database import get_user_tokens, get_referral_stats
 
-TOKENS_PER_REFERRAL = 10
+TOKENS_PER_REFERRAL = 1
 TOKEN_SELL_RATE = 0.01
 
 @Bot.on_callback_query()
