@@ -389,6 +389,48 @@ REPLY_ERROR = """<code>Use this command as a replay to any telegram message with
         
 @Bot.on_message(filters.command('start') & filters.private)
 async def not_joined(client: Client, message: Message):
+    id = message.from_user.id
+    if not await present_user(id):
+        try:
+            await add_user(id)
+        except:
+            pass
+    
+    text = message.text
+    referral_msg = None
+    
+    if len(text) > 7:
+        try:
+            base64_string = text.split(" ", 1)[1]
+            try:
+                referrer_id = int(base64_string)
+                if referrer_id != id and await present_user(referrer_id):
+                    success = await add_referral_user(referrer_id, id)
+                    if success:
+                        await update_user_tokens(referrer_id, TOKENS_PER_REFERRAL)
+                        
+                        try:
+                            await client.send_message(
+                                referrer_id,
+                                f"🎉 **Congratulations!**\n\n"
+                                f"You earned **{TOKENS_PER_REFERRAL} tokens** for referring a new user!\n"
+                                f"Your current token balance: **{await get_user_tokens(referrer_id)} tokens**\n\n"
+                                f"Use /tokens to check your balance or /sell_tokens to sell them back."
+                            )
+                        except:
+                            pass
+                        
+                        referral_msg = (
+                            f"🎉 **Welcome!**\n\n"
+                            f"You were referred by someone and they just earned tokens!\n"
+                            f"You can also start earning tokens by sharing your referral link.\n\n"
+                            f"Use /referral to get your link!\n\n"
+                        )
+            except ValueError:
+                pass
+        except:
+            pass
+    
     buttons = []
     
     bot_id = client.me.id
@@ -413,89 +455,33 @@ async def not_joined(client: Client, message: Message):
 
     button_rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
 
-    try:
-        button_rows.append(
-            [
-                InlineKeyboardButton(
-                    text='Try Again',
-                    url=f"https://t.me/{client.username}?start={message.command[1]}"
-                )
-            ]
-        )
-    except IndexError:
-        pass
+    if not referral_msg:
+        try:
+            button_rows.append(
+                [
+                    InlineKeyboardButton(
+                        text='Try Again',
+                        url=f"https://t.me/{client.username}?start={message.command[1]}"
+                    )
+                ]
+            )
+        except IndexError:
+            pass
 
-    await message.reply(
-        text=FORCE_MSG.format(
-            first=message.from_user.first_name,
-            last=message.from_user.last_name,
-            username=None if not message.from_user.username else '@' + message.from_user.username,
-            mention=message.from_user.mention,
-            id=message.from_user.id
-        ),
-        reply_markup=InlineKeyboardMarkup(button_rows),
-        quote=True,
-        disable_web_page_preview=True
+    final_msg = ""
+    if referral_msg:
+        final_msg += referral_msg
+    
+    final_msg += FORCE_MSG.format(
+        first=message.from_user.first_name,
+        last=message.from_user.last_name,
+        username=None if not message.from_user.username else '@' + message.from_user.username,
+        mention=message.from_user.mention,
+        id=message.from_user.id
     )
 
-    
-#=====================================================================================##
-
-WAIT_MSG = """"<b>Processing ...</b>"""
-
-REPLY_ERROR = """<code>Use this command as a replay to any telegram message with out any spaces.</code>"""
-
-#=====================================================================================##
-
-        
-@Bot.on_message(filters.command('start') & filters.private)
-async def not_joined(client: Client, message: Message):
-    buttons = []
-    
-    bot_id = client.me.id
-    fsub_entry = fsub.find_one({"_id": bot_id})
-
-    if not fsub_entry or "channel_ids" not in fsub_entry:
-        return
-
-    force_sub_channels = fsub_entry["channel_ids"]
-    
-    # Iterate through each force subscription channel
-    for idx, force_sub_channel in enumerate(force_sub_channels, start=1):
-        try:
-            invite_link = await client.create_chat_invite_link(chat_id=force_sub_channel)
-            buttons.append(
-                InlineKeyboardButton(
-                    f"Join Channel {idx}",
-                    url=invite_link.invite_link
-                )
-            )
-        except Exception as e:
-            print(f"Error creating invite link for channel {force_sub_channel}: {e}")
-
-    # Group buttons into rows of two
-    button_rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
-
-    try:
-        button_rows.append(
-            [
-                InlineKeyboardButton(
-                    text='Try Again',
-                    url=f"https://t.me/{client.username}?start={message.command[1]}"
-                )
-            ]
-        )
-    except IndexError:
-        pass
-
     await message.reply(
-        text=FORCE_MSG.format(
-            first=message.from_user.first_name,
-            last=message.from_user.last_name,
-            username=None if not message.from_user.username else '@' + message.from_user.username,
-            mention=message.from_user.mention,
-            id=message.from_user.id
-        ),
+        text=final_msg,
         reply_markup=InlineKeyboardMarkup(button_rows),
         quote=True,
         disable_web_page_preview=True
