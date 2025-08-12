@@ -390,26 +390,25 @@ REPLY_ERROR = """<code>Use this command as a replay to any telegram message with
         
 @Bot.on_message(filters.command('start') & filters.private)
 async def not_joined(client: Client, message: Message):
-    id = message.from_user.id
-    if not await present_user(id):
+    user_id = message.from_user.id
+    if not await present_user(user_id):
         try:
-            await add_user(id)
+            await add_user(user_id)
         except:
             pass
-    
+
     text = message.text
     referral_msg = None
-    
+
     if len(text) > 7:
         try:
             base64_string = text.split(" ", 1)[1]
             try:
                 referrer_id = int(base64_string)
-                if referrer_id != id and await present_user(referrer_id):
-                    success = await add_referral_user(referrer_id, id)
+                if referrer_id != user_id and await present_user(referrer_id):
+                    success = await add_referral_user(referrer_id, user_id)
                     if success:
                         await update_user_tokens(referrer_id, TOKENS_PER_REFERRAL)
-                        
                         try:
                             await client.send_message(
                                 referrer_id,
@@ -420,7 +419,6 @@ async def not_joined(client: Client, message: Message):
                             )
                         except:
                             pass
-                        
                         referral_msg = (
                             f"🎉 **Welcome!**\n\n"
                             f"You were referred by someone and they just earned tokens!\n"
@@ -431,48 +429,49 @@ async def not_joined(client: Client, message: Message):
                 pass
         except:
             pass
-    
+
     buttons = []
-    
     bot_id = client.me.id
     fsub_entry = fsub.find_one({"_id": bot_id})
 
-    if not fsub_entry or "channels" not in fsub_entry:
-        return
-
-    for channel in fsub_entry["channels"]:
-        try:
-            member = await client.get_chat_member(int(channel["id"]), id)
-            if member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.MEMBER]:
-                invite_link = await client.create_chat_invite_link(int(channel["id"]))
-                buttons.append(
-                    InlineKeyboardButton(
-                        channel["name"],
-                        url=invite_link.invite_link
+    if fsub_entry and "channels" in fsub_entry:
+        for channel in fsub_entry["channels"]:
+            try:
+                member = await client.get_chat_member(int(channel["id"]), user_id)
+                if member.status not in [
+                    ChatMemberStatus.OWNER,
+                    ChatMemberStatus.ADMINISTRATOR,
+                    ChatMemberStatus.MEMBER
+                ]:
+                    invite_link = await client.create_chat_invite_link(int(channel["id"]))
+                    buttons.append(
+                        InlineKeyboardButton(
+                            channel["name"],
+                            url=invite_link.invite_link
+                        )
                     )
-                )
-        except Exception as e:
-            continue
+            except:
+                continue
 
     button_rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
 
-    if not referral_msg:
+    # Add fallback button if no join buttons exist
+    if not button_rows:
         try:
-            button_rows.append(
-                [
+            if len(message.command) > 1:
+                button_rows.append([
                     InlineKeyboardButton(
                         text='Try Again',
                         url=f"https://t.me/{client.username}?start={message.command[1]}"
                     )
-                ]
-            )
-        except IndexError:
+                ])
+        except:
             pass
 
     final_msg = ""
     if referral_msg:
         final_msg += referral_msg
-    
+
     final_msg += FORCE_MSG.format(
         first=message.from_user.first_name,
         last=message.from_user.last_name,
@@ -481,12 +480,21 @@ async def not_joined(client: Client, message: Message):
         id=message.from_user.id
     )
 
-    await message.reply(
-        text=final_msg,
-        reply_markup=InlineKeyboardMarkup(button_rows),
-        quote=True,
-        disable_web_page_preview=True
-    )
+    # Send with markup only if buttons exist
+    if button_rows:
+        await message.reply(
+            text=final_msg,
+            reply_markup=InlineKeyboardMarkup(button_rows),
+            quote=True,
+            disable_web_page_preview=True
+        )
+    else:
+        await message.reply(
+            text=final_msg,
+            quote=True,
+            disable_web_page_preview=True
+        )
+
 
 @Bot.on_message(filters.command('users') & filters.private & filters.user(ADMINS))
 async def get_users(client: Bot, message: Message):
