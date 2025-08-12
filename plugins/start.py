@@ -436,6 +436,7 @@ async def not_joined(client: Client, message: Message):
 
     if fsub_entry and "channels" in fsub_entry:
         for channel in fsub_entry["channels"]:
+            print(channel)
             try:
                 member = await client.get_chat_member(int(channel["id"]), user_id)
                 if member.status not in [
@@ -450,7 +451,8 @@ async def not_joined(client: Client, message: Message):
                             url=invite_link
                         )
                     )
-            except:
+            except Exception as e:
+                print(e)
                 continue
 
     button_rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
