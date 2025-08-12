@@ -443,11 +443,11 @@ async def not_joined(client: Client, message: Message):
                     ChatMemberStatus.ADMINISTRATOR,
                     ChatMemberStatus.MEMBER
                 ]:
-                    invite_link = await client.create_chat_invite_link(int(channel["id"]))
+                    invite_link = await client.export_chat_invite_link(int(channel["id"]))
                     buttons.append(
                         InlineKeyboardButton(
                             channel["name"],
-                            url=invite_link.invite_link
+                            url=invite_link
                         )
                     )
             except:
