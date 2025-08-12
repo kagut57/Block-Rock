@@ -439,18 +439,14 @@ async def not_joined(client: Client, message: Message):
             print(channel)
             try:
                 member = await client.get_chat_member(int(channel["id"]), user_id)
-                if member.status not in [
-                    ChatMemberStatus.OWNER,
-                    ChatMemberStatus.ADMINISTRATOR,
-                    ChatMemberStatus.MEMBER
-                ]:
-                    invite_link = await client.export_chat_invite_link(int(channel["id"]))
-                    buttons.append(
-                        InlineKeyboardButton(
-                            channel["name"],
-                            url=invite_link
-                        )
+            except UserNotParticipant:
+                invite_link = await client.export_chat_invite_link(int(channel["id"]))
+                buttons.append(
+                    InlineKeyboardButton(
+                        channel["name"],
+                        url=invite_link
                     )
+                )
             except Exception as e:
                 print(e)
                 continue
