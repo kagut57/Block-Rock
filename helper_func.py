@@ -15,22 +15,23 @@ async def is_subscribed(filter, client, update):
     bot_id = client.me.id
     fsub_entry = fsub.find_one({"_id": bot_id})
 
-    if not fsub_entry or "channel_ids" not in fsub_entry:
+    if not fsub_entry or "channels" not in fsub_entry:
         return True
-    
-    force_sub_channels = fsub_entry["channel_ids"]
     
     user_id = update.from_user.id
     
     if user_id in ADMINS:
         return True
 
-    for force_sub_channel in force_sub_channels:
+    for channel in fsub_entry["channels"]:
         try:
-            member = await client.get_chat_member(chat_id=force_sub_channel, user_id=user_id)
+            member = await client.get_chat_member(chat_id=int(channel["id"]), user_id=user_id)
             if member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.MEMBER]:
                 return False
         except UserNotParticipant:
+            return False
+        except Exception as e:
+            print(f"Error checking subscription for channel {channel['id']}: {e}")
             return False
             
     return True
