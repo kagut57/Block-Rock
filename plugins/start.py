@@ -742,10 +742,12 @@ async def del_fsub(client, message):
     channel_ids = message.text.split()[1:]
     bot_id = client.me.id
 
-    fsub.update_one(
-        {"_id": bot_id},
-        {"$pull": {"channel_ids": {"$in": channel_ids}}}
-    )
+    for cid in channel_ids:
+        fsub.update_one(
+            {"_id": bot_id},
+            {"$pull": {"channels": {"id": str(cid)}}}
+        )
+
     await message.reply(f"Deleted channel IDs: {', '.join(channel_ids)}")
 
 ### Showing All Channel IDs
