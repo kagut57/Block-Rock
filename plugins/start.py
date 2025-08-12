@@ -389,6 +389,8 @@ REPLY_ERROR = """<code>Use this command as a replay to any telegram message with
 
 #=====================================================================================##
         
+fsub_links = {}
+
 @Bot.on_message(filters.command('start') & filters.private)
 async def not_joined(client: Client, message: Message):
     user_id = message.from_user.id
@@ -437,15 +439,21 @@ async def not_joined(client: Client, message: Message):
 
     if fsub_entry and "channels" in fsub_entry:
         for channel in fsub_entry["channels"]:
-            print(channel)
             try:
                 member = await client.get_chat_member(int(channel["id"]), user_id)
             except UserNotParticipant:
-                invite_link = await client.export_chat_invite_link(int(channel["id"]))
+                channel_id = str(channel["id"])
+                if channel_id not in fsub_links:
+                    try:
+                        fsub_links[channel_id] = await client.export_chat_invite_link(int(channel_id))
+                    except Exception as e:
+                        print(f"Error getting invite link for {channel_id}: {e}")
+                        continue
+
                 buttons.append(
                     InlineKeyboardButton(
                         channel["name"],
-                        url=invite_link
+                        url=fsub_links[channel_id]
                     )
                 )
             except Exception as e:
@@ -454,7 +462,6 @@ async def not_joined(client: Client, message: Message):
 
     button_rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
 
-    # Add fallback button if no join buttons exist
     if not button_rows:
         try:
             if len(message.command) > 1:
@@ -467,10 +474,7 @@ async def not_joined(client: Client, message: Message):
         except:
             pass
 
-    final_msg = ""
-    if referral_msg:
-        final_msg += referral_msg
-
+    final_msg = referral_msg or ""
     final_msg += FORCE_MSG.format(
         first=message.from_user.first_name,
         last=message.from_user.last_name,
@@ -479,7 +483,6 @@ async def not_joined(client: Client, message: Message):
         id=message.from_user.id
     )
 
-    # Send with markup only if buttons exist
     if button_rows:
         await message.reply(
             text=final_msg,
@@ -493,6 +496,7 @@ async def not_joined(client: Client, message: Message):
             quote=True,
             disable_web_page_preview=True
         )
+
 
 
 @Bot.on_message(filters.command('users') & filters.private & filters.user(ADMINS))
