@@ -436,6 +436,8 @@ async def not_joined(client: Client, message: Message):
     buttons = []
     bot_id = client.me.id
     fsub_entry = fsub.find_one({"_id": bot_id})
+    if not fusb_entry:
+        return
 
     if fsub_entry and "channels" in fsub_entry:
         for channel in fsub_entry["channels"]:
